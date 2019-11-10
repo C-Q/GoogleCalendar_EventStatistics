@@ -18,7 +18,7 @@ function AddEmployees() {
   }
 }
 
-function StatisticsForEachYear(employee, id) {
+function StatisticsForEachYear(employee, id) { 
   
   var cal = CalendarApp.getCalendarById(id);
   var events = cal.getEvents(new Date("January 1, 2016 00:00:00"), new Date());
@@ -35,6 +35,7 @@ function StatisticsForEachYear(employee, id) {
   var monthEvents = 0;
   var monthDays = 1;
   var monthAverage = 0;
+  var wasFiltered = 0
   
   // стартовые значения текущего года, месяца и дня: 
   var thisYear = events[0].getStartTime().getFullYear();
@@ -55,9 +56,26 @@ function StatisticsForEachYear(employee, id) {
   var titlesMonths = [['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь',]];
   var titlesData = [['Месяц'],['Всего_в_мес'],['Сред_в_мес']];
   
+  // параметры для фильтрации событий-неПациентов:
+  var filterKeywords = ['занят', 'уехал']; // !!! wasFiltered наматывает все события, но сцуко реально фильтруются только по последнему элементу массива
+  var triggeredKeywords = [];
+  
   
   // и поехали:
   for (i=0; i<events.length; i++) {
+    
+    // фильтруем события заголовки которых содержат ключевые слова:
+    var evTitle =( events[i].getTitle() ).toLowerCase();
+    for (var f=0; f < filterKeywords.length; f++) {
+      if ( evTitle.indexOf(filterKeywords[f]) != -1 ) {
+        wasFiltered ++;
+        var stopIter = true;
+        if (triggeredKeywords.indexOf(filterKeywords[f]) == -1) {
+          triggeredKeywords.push(filterKeywords[f]);
+        }
+      } else {stopIter = false;}
+    }
+    if (stopIter == true) continue;
 
     var nextYear = events[i].getStartTime().getFullYear();
     if (thisYear == nextYear) {
@@ -105,6 +123,9 @@ function StatisticsForEachYear(employee, id) {
     }
   }
   TableBuild(sheet,this_YearEvents,thisYear,yearEvents,monthAverage,monthEvents,monthDays,each_MonthEventAver,thisMonth,indent_devideString,indent_emptySells,indent_titlesYearPatients,indent_titlesMonths,indent_titlesData,indent_YearEvents,indent_MonthEventAver,titlesYearPatients,titlesMonths,titlesData);
+  
+Logger.log(wasFiltered.toFixed());
+Logger.log(triggeredKeywords);
 }
 
 
@@ -143,7 +164,5 @@ function TableBuild(sheet,this_YearEvents,thisYear,yearEvents,monthAverage,month
     // и вставляем результаты:
   range_YearEvents.setValues(this_YearEvents);
   range_MonthEventAver.setValues(each_MonthEventAver);
-  
-Logger.log(each_MonthEventAver);
   
 }
