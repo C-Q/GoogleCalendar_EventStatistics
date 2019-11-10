@@ -1,33 +1,47 @@
-function StatisticsForEachYear() {
-  // Скрипт получает массив объектов (событий календаря), обходит его в цикле, инкрементируя счетчики по таким свойствам событий: год (.getFullYear), месяц (.getMonth), день (.getDate)
-  
-  var cal = CalendarApp.getCalendarById("kging7ubddkgvkgu6k12iuohi4@group.calendar.google.com");
-  var events = cal.getEvents(new Date("February 1, 2017 00:00:00"), new Date());
-  
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet4");
-  sheet.clearContents();
-  var sheetSourse = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet3"); // шаблон оформления
-  
-  var range_YearEvents = sheet.getRange(2,3,2,1);                // получаем диапазоны для вывода значения года и общего количества событий в этом году,
-  var range_MonthEventAver = sheet.getRange(5,2,2,12);           // и для вывода общего и среднего(в зависимости от количества дней с событиями) количества событий в каждом месяце
-  
-  var value_titlesYearPatients = sheetSourse.getRange(2,1,2,2).getValues(); // Заголовки "год" и "пациентов в году" array[[],[]];
-  var value_titlesMonths = sheetSourse.getRange(4,2,1,12).getValues();      // названия месяцев array[[]];
-  var value_titlesData = sheetSourse.getRange(4,1,3,1).getValues();         // заголовки строк "всего событий в месяце" и "в среднем событий в месяце" array[[],[]];
 
+  /* Скрипт получает массив объектов (событий календаря), обходит его в цикле, инкрементируя 
+  счетчики при изменении следующих свойств событий: год(.getFullYear), месяц(.getMonth), день(.getDate).
+  Считает общее количество событий в каждом году, количество событий в каждом месяце года, 
+  событий в среднем в каждом месяце (событийВмесяце / днейСсобытиями), и выводит результаты в таблицу. */
+
+function AddEmployees() {
   
-  var arrToPrint = [];
-  var eachYearAll = [];
+  var staffCalendarsID = {
+    Лях: "kging7ubddkgvkgu6k12iuohi4@group.calendar.google.com",
+//    Величко: "ruvajop3dg216vioupdmqmqh3o@group.calendar.google.com",
+//    Валуева: "uej0ulbenqucdp2b1joc8vavh0@group.calendar.google.com",
+  }
+  
+  for (var employee in staffCalendarsID) {
+    var id = staffCalendarsID[employee];
+    StatisticsForEachYear(employee, id);
+  }
+}
+
+function StatisticsForEachYear(employee, id) {
+  
+  var cal = CalendarApp.getCalendarById(id);
+  var events = cal.getEvents(new Date("January 1, 2016 00:00:00"), new Date());
+  
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(employee);
+  sheet.clearContents();
+  sheet.setColumnWidths(1, 13, 85);
+  
   var this_YearEvents = [[],[]]; // первый элемент - значение года, второй - количество событий в этом году
-  var each_MonthEventAver = [[,,,,,,,,,,,,],[,,,,,,,,,,,,]];  // первый элемент - количество событий в мес (each_MonthEventAver[0] = each_MonthEventAver[0]), второй - среднее кол-во событий в мес (each_MonthEventAver[1] = each_MonthEventAver[1]).
-  
+  var each_MonthEventAver = [[0,0,0,0,0,0,0,0,0,0,0,0,],[0,0,0,0,0,0,0,0,0,0,0,0,]];  // первый элемент - количество событий в мес (each_MonthEventAver[0] = each_MonthEventAver[0]), второй - среднее кол-во событий в мес (each_MonthEventAver[1] = each_MonthEventAver[1]).
   
   // стартовые значения счетчиков:
   var yearEvents = 0;
   var monthEvents = 0;
   var monthDays = 1;
   var monthAverage = 0;
-    // стартовые значения вертикальных отступов для цикличного изменения диапазонов:
+  
+  // стартовые значения текущего года, месяца и дня: 
+  var thisYear = events[0].getStartTime().getFullYear();
+  var thisMonth = events[0].getStartTime().getMonth();
+  var thisDay = events[0].getStartTime().getDate();
+  
+  // стартовые значения вертикальных отступов для цикличного изменения диапазонов:
   var indent_YearEvents = 2;
   var indent_MonthEventAver = 5;
   var indent_titlesYearPatients = 2;
@@ -36,10 +50,13 @@ function StatisticsForEachYear() {
   var indent_devideString = 1;
   var indent_emptySells = 2;
   
-  var thisYear = events[0].getStartTime().getFullYear();
-  var thisMonth = events[0].getStartTime().getMonth();
-  var thisDay = events[0].getStartTime().getDate();
+  // значения для ячеек оформления:
+  var titlesYearPatients = [["Год",""],["Пациентов в году",""]];
+  var titlesMonths = [['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь',]];
+  var titlesData = [['Месяц'],['Всего_в_мес'],['Сред_в_мес']];
   
+  
+  // и поехали:
   for (i=0; i<events.length; i++) {
 
     var nextYear = events[i].getStartTime().getFullYear();
@@ -53,98 +70,80 @@ function StatisticsForEachYear() {
         var nextDay = events[i].getStartTime().getDate();
         if (thisDay != nextDay) {
           monthDays ++;
-          thisDay = events[i].getStartTime().getDate();
+          thisDay = events[i].getStartTime().getDate(); // обновляем значение дня
         }
       
       } else {
         monthAverage = (monthEvents/monthDays).toFixed(2);
         each_MonthEventAver[0][thisMonth] = monthEvents.toFixed();
         each_MonthEventAver[1][thisMonth] = monthAverage;
+        thisMonth = events[i].getStartTime().getMonth(); // обновляем значение месяца
         monthEvents = 1;
         monthDays = 1;
-        thisMonth = events[i].getStartTime().getMonth();
       }
       
     } else {
-      this_YearEvents = [[thisYear.toFixed()],[yearEvents.toFixed()]];
-      monthAverage = (monthEvents/monthDays).toFixed(2);
-      each_MonthEventAver[0][thisMonth] = monthEvents.toFixed();
-      each_MonthEventAver[1][thisMonth] = monthAverage;
+      TableBuild(sheet,this_YearEvents,thisYear,yearEvents,monthAverage,monthEvents,monthDays,each_MonthEventAver,thisMonth,indent_devideString,indent_emptySells,indent_titlesYearPatients,indent_titlesMonths,indent_titlesData,indent_YearEvents,indent_MonthEventAver,titlesYearPatients,titlesMonths,titlesData);
       
-      // оформление таблицы:
-      sheet.getRange(indent_devideString,1,6,13).setBorder(true,true,true,true,true,true); // разлиновываем всю таблицу
-      sheet.getRange(indent_devideString,1,1,13).mergeAcross();
-      sheet.getRange(indent_titlesYearPatients,1,2,2).mergeAcross();
-      sheet.getRange(indent_emptySells,5,2,9).merge();
-      sheet.getRange(indent_titlesYearPatients,1,2,2).setHorizontalAlignments([['right','right'],['right','right']]);
-      sheet.getRange(indent_YearEvents,3,2,2).mergeAcross();
-      sheet.getRange(indent_YearEvents,3,2,2).setHorizontalAlignments([['center','center'],['center','center']]);
-      sheet.getRange(indent_titlesYearPatients,1,2,2).setValues(value_titlesYearPatients);
-      sheet.getRange(indent_titlesMonths,2,1,12).setValues(value_titlesMonths);
-      sheet.getRange(indent_titlesMonths,2,1,12).setHorizontalAlignments([['center','center','center','center','center','center','center','center','center','center','center','center']]);
-      sheet.getRange(indent_titlesData,1,3,1).setValues(value_titlesData);
-      sheet.getRange(indent_titlesData,1,3,1).setHorizontalAlignments([['right'],['right'],['right']]);
-      
+      // инкрементируем вертикальные отступы для оформления таблицы следующего года:
       indent_devideString += 6;
       indent_emptySells += 6;
       indent_titlesYearPatients += 6;
       indent_titlesMonths += 6;
       indent_titlesData += 6;
-      
-      eachYearAll[0] = this_YearEvents;
-      eachYearAll[1] = each_MonthEventAver;
-      range_YearEvents = sheet.getRange(indent_YearEvents,3,2,1);
-      range_MonthEventAver = sheet.getRange(indent_MonthEventAver,2,2,12);
-      range_YearEvents.setValues(this_YearEvents);
-      range_MonthEventAver.setValues(each_MonthEventAver);
-      range_MonthEventAver.setHorizontalAlignments([['center','center','center','center','center','center','center','center','center','center','center','center'],['center','center','center','center','center','center','center','center','center','center','center','center']]);
       indent_YearEvents += 6;
       indent_MonthEventAver += 6;
       
-      arrToPrint.push(eachYearAll);
+      // готовим переменные цикла для прохода по следующему году:
       yearEvents = 1;
       monthEvents = 1;
       monthDays = 1;
-      eachYearAll = [];
-      each_MonthEventAver = [[,,,,,,,,,,,,],[,,,,,,,,,,,,]];
+      each_MonthEventAver = [[0,0,0,0,0,0,0,0,0,0,0,0,],[0,0,0,0,0,0,0,0,0,0,0,0,]];
       thisDay = events[i].getStartTime().getDate();
       thisMonth = events[i].getStartTime().getMonth();
       thisYear = events[i].getStartTime().getFullYear();
     }
   }
-  monthAverage = (monthEvents/monthDays).toFixed(2);
-  each_MonthEventAver[0][thisMonth] = monthEvents;
-  each_MonthEventAver[1][thisMonth] = monthAverage;
-  this_YearEvents = [[thisYear],[yearEvents]];
+  TableBuild(sheet,this_YearEvents,thisYear,yearEvents,monthAverage,monthEvents,monthDays,each_MonthEventAver,thisMonth,indent_devideString,indent_emptySells,indent_titlesYearPatients,indent_titlesMonths,indent_titlesData,indent_YearEvents,indent_MonthEventAver,titlesYearPatients,titlesMonths,titlesData);
+}
+
+
+function TableBuild(sheet,this_YearEvents,thisYear,yearEvents,monthAverage,monthEvents,monthDays,each_MonthEventAver,thisMonth,indent_devideString,indent_emptySells,indent_titlesYearPatients,indent_titlesMonths,indent_titlesData,indent_YearEvents,indent_MonthEventAver,titlesYearPatients,titlesMonths,titlesData) {
   
-  eachYearAll[0] = this_YearEvents;
-  eachYearAll[1] = each_MonthEventAver;
-//  indent_YearEvents -= 1;      // костыль:((
-  range_YearEvents = sheet.getRange(indent_YearEvents,3,2,1);
-  range_MonthEventAver = sheet.getRange(indent_MonthEventAver,2,2,12);
-  range_YearEvents.clearContent();
-  range_MonthEventAver.clearContent();
+  // вычисляем среднее и заполняем массив для вставки в диапазон результатов:
+  this_YearEvents = [[thisYear.toFixed(),""],[yearEvents.toFixed(),""]];
+  monthAverage = (monthEvents/monthDays);
+  each_MonthEventAver[0][thisMonth] = monthEvents.toFixed();
+  each_MonthEventAver[1][thisMonth] = monthAverage.toFixed(2);
+  
+  // Оформление таблицы:
+    // получаем диапазоны:
+  var range_YearBlock = sheet.getRange(indent_devideString,1,6,13);
+  var range_devideString = sheet.getRange(indent_devideString,1,1,13);
+  var range_emptySells = sheet.getRange(indent_emptySells,5,2,9);
+  var range_titlesYearPatients = sheet.getRange(indent_titlesYearPatients,1,2,2);
+  var range_titlesMonths = sheet.getRange(indent_titlesMonths,2,1,12);
+  var range_titlesData = sheet.getRange(indent_titlesData,1,3,1);
+  var range_YearEvents = sheet.getRange(indent_YearEvents,3,2,2);
+  var range_MonthEventAver = sheet.getRange(indent_MonthEventAver,2,2,12);
+     // задаем им форматирование:
+  range_YearBlock.setBorder(true,true,true,true,true,true); // разлиновываем всю таблицу, затем:
+  range_devideString.merge();
+  range_emptySells.merge();
+  range_titlesYearPatients.mergeAcross();
+  range_titlesYearPatients.setHorizontalAlignments([['right','right'],['right','right']]);
+  range_titlesYearPatients.setValues(titlesYearPatients);
+  range_titlesMonths.setHorizontalAlignments([['center','center','center','center','center','center','center','center','center','center','center','center']]);
+  range_titlesMonths.setValues(titlesMonths);
+  range_titlesData.setHorizontalAlignments([['right'],['right'],['right']]);
+  range_titlesData.setValues(titlesData);
+  range_YearEvents.setHorizontalAlignments([['center','center'],['center','center']]);
+  range_YearEvents.mergeAcross();
+  range_MonthEventAver.setHorizontalAlignments([['center','center','center','center','center','center','center','center','center','center','center','center'],['center','center','center','center','center','center','center','center','center','center','center','center']]);
+    // и вставляем результаты:
   range_YearEvents.setValues(this_YearEvents);
   range_MonthEventAver.setValues(each_MonthEventAver);
   
-  // оформление таблицы:
-  sheet.getRange(indent_devideString,1,6,13).setBorder(true,true,true,true,true,true);
-  sheet.getRange(indent_devideString,1,1,13).mergeAcross();
-  sheet.getRange(indent_titlesYearPatients,1,2,2).mergeAcross();
-  sheet.getRange(indent_YearEvents,3,2,2).mergeAcross();
-  sheet.getRange(indent_emptySells,5,2,9).merge();
-  sheet.getRange(indent_YearEvents,3,2,2).setHorizontalAlignments([['center','center'],['center','center']]);
-  sheet.getRange(indent_titlesYearPatients,1,2,2).setValues(value_titlesYearPatients);
-  sheet.getRange(indent_titlesYearPatients,1,2,2).setHorizontalAlignments([['right','right'],['right','right']]);
-  sheet.getRange(indent_titlesMonths,2,1,12).setValues(value_titlesMonths);
-  sheet.getRange(indent_titlesMonths,2,1,12).setHorizontalAlignments([['center','center','center','center','center','center','center','center','center','center','center','center']]);
-  sheet.getRange(indent_titlesData,1,3,1).setValues(value_titlesData);
-  sheet.getRange(indent_titlesData,1,3,1).setHorizontalAlignments([['right'],['right'],['right']]);
-  range_MonthEventAver.setHorizontalAlignments([['center','center','center','center','center','center','center','center','center','center','center','center'],['center','center','center','center','center','center','center','center','center','center','center','center']]);
-  
-
-  arrToPrint.push(eachYearAll);
-Logger.log(arrToPrint);
+Logger.log(each_MonthEventAver);
   
 }
-
