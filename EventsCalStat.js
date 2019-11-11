@@ -66,16 +66,14 @@ function StatisticsForEachYear(employee, id) {
     
     // фильтруем события заголовки которых содержат ключевые слова:
     var evTitle =( events[i].getTitle() ).toLowerCase();
-    for (var f=0; f < filterKeywords.length; f++) {
-      if ( evTitle.indexOf(filterKeywords[f]) != -1 ) {
-        wasFiltered ++;
-        var stopIter = true;
-        if (triggeredKeywords.indexOf(filterKeywords[f]) == -1) {
-          triggeredKeywords.push(filterKeywords[f]);
-        }
-      } else {stopIter = false;}
+    var firstWordTitle = evTitle.substring(0, evTitle.indexOf(" "));
+    if ( filterKeywords.indexOf(firstWordTitle) != -1 ) {
+      wasFiltered ++;
+      if (triggeredKeywords.indexOf(firstWordTitle) == -1) {
+        triggeredKeywords.push(filterKeywords[filterKeywords.indexOf(firstWordTitle)]);
+      }
+      continue;
     }
-    if (stopIter == true) continue;
 
     var nextYear = events[i].getStartTime().getFullYear();
     if (thisYear == nextYear) {
