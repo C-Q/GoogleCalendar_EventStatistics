@@ -1,34 +1,64 @@
 
-  /* Скрипт получает массив объектов (событий календаря), обходит его в цикле, инкрементируя 
-  счетчики при изменении следующих свойств событий: год(.getFullYear), месяц(.getMonth), день(.getDate).
-  Считает общее количество событий в каждом году, количество событий в каждом месяце года, 
-  событий в среднем в каждом месяце (событийВмесяце / днейСсобытиями), и выводит результаты в таблицу. */
-
-function AddEmployees() {
+/* task:
+  Скрипт получает массив объектов (событий календаря), обходит его в цикле, отфильтровывает события по
+  заданным ключевым словам. Затем инкрементирует счетчики при изменении следующих свойств событий:
+  год(.getFullYear), месяц(.getMonth), день(.getDate). Считает общее количество событий в каждом году,
+  количество событий в каждом месяце года, среднее количество событий в каждом месяце (событийВмесяце / днейСсобытиями),
+  и выводит результаты в таблицу.
+done! */
   
-  var staffCalendarsID = {
-    Лях: "kging7ubddkgvkgu6k12iuohi4@group.calendar.google.com",
-//    Величко: "ruvajop3dg216vioupdmqmqh3o@group.calendar.google.com",
-//    Валуева: "uej0ulbenqucdp2b1joc8vavh0@group.calendar.google.com",
+/* next task: (Дадим пользователю не рыбку но удочку)
+  Сделать так чтобы скрипт обрабатывал более одного календаря, т.е.: берем фамилии сотрудников, айдишники их календарей и
+  ключевые слова для отфильтровывания ненужных событий, из стартовой вкладки таблицы, и для формирования отчета по каждому
+  сотруднику создаем новую вкладку.
+  Т.е. пользователь скрипта на старте видит лишь "StartPage", в которую вписыват фамилии, ключевые слова для
+  фильтрации, вставляет айдишники календарей и нажимает типа-кнопку <Рассчитать статистику>.
+  Отчет по каждому сотруднику формируется в отдельной, генерируемой скриптом, вкладке.
+done! */
+
+/* next task:
+  Парой строк ниже отчета, в каждой вкладке должно выводиться общее количество отфильтрованных событий и список ключевых слов
+  по которым они были отфильтрованы применительно к конкретному сотруднику
+done! */
+
+/* next task:
+  Раскрасить таблицу в соответствии с шаблоном
+done! */
+
+function StartFunc() {
+  
+  var startSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('StartPage');
+  var staffCalendarsID = startSheet.getRange(3,1,20,2).getValues(); // массив с фамилиями сотрудников и ID их календарей
+  var filterKeywords2Dem = startSheet.getRange(3,3,20,1).getValues(); // массив массивов с ключевыми словами для фильтрации событий
+  var filterKeywords = [];
+  
+  for (var i=0; i<filterKeywords2Dem.length; i++) { // метод .indexOf() работает только с одномерным массивом. дадим ему его:
+    filterKeywords.push(filterKeywords2Dem[i][0])
   }
   
-  for (var employee in staffCalendarsID) {
-    var id = staffCalendarsID[employee];
-    StatisticsForEachYear(employee, id);
+  for (var i=0; i<staffCalendarsID.length; i++) { // создаем вкладку на каждого сотрудника. если таковая уже есть, обновляем ее
+    var sheetName = staffCalendarsID[i][0];
+    var employeeCalID = staffCalendarsID[i][1];
+    if (SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName)) {
+      SpreadsheetApp.getActiveSpreadsheet().deleteSheet(SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName));
+    }
+    if (sheetName == '') { break } // диапазон для staffCalendarsID был взят с запасом (костыль для отсечения лишних элементов массива)
+    SpreadsheetApp.getActiveSpreadsheet().insertSheet(sheetName);
+    StatisticsForEachYear(sheetName, employeeCalID, filterKeywords);
   }
 }
 
-function StatisticsForEachYear(employee, id) { 
+function StatisticsForEachYear(sheetName, employeeCalID, filterKeywords) { 
   
-  var cal = CalendarApp.getCalendarById(id);
-  var events = cal.getEvents(new Date("January 1, 2016 00:00:00"), new Date());
+  var cal = CalendarApp.getCalendarById(employeeCalID);
+  var events = cal.getEvents(new Date("January 1, 2014 00:00:00"), new Date());
   
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(employee);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   sheet.clearContents();
   sheet.setColumnWidths(1, 13, 85);
   
   var this_YearEvents = [[],[]]; // первый элемент - значение года, второй - количество событий в этом году
-  var each_MonthEventAver = [[0,0,0,0,0,0,0,0,0,0,0,0,],[0,0,0,0,0,0,0,0,0,0,0,0,]];  // первый элемент - количество событий в мес (each_MonthEventAver[0] = each_MonthEventAver[0]), второй - среднее кол-во событий в мес (each_MonthEventAver[1] = each_MonthEventAver[1]).
+  var each_MonthEventAver = [[0,0,0,0,0,0,0,0,0,0,0,0,],[0,0,0,0,0,0,0,0,0,0,0,0,]];  // первый элемент - количество событий в каждом месяце, второй - среднее кол-во событий в каждом месяце
   
   // стартовые значения счетчиков:
   var yearEvents = 0;
@@ -56,19 +86,19 @@ function StatisticsForEachYear(employee, id) {
   var titlesMonths = [['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь',]];
   var titlesData = [['Месяц'],['Всего_в_мес'],['Сред_в_мес']];
   
-  // параметры для фильтрации событий-неПациентов:
-  var filterKeywords = ['занят', 'уехал']; // !!! wasFiltered наматывает все события, но сцуко реально фильтруются только по последнему элементу массива
+  // допПраметры для фильтрации событий-неПациентов
   var triggeredKeywords = [];
-  
+  var debugArr = [];
   
   // и поехали:
-  for (i=0; i<events.length; i++) {
+  for (i=0; i<events.length; i++) { 
     
-    // фильтруем события заголовки которых содержат ключевые слова:
-    var evTitle =( events[i].getTitle() ).toLowerCase();
-    var firstWordTitle = evTitle.substring(0, evTitle.indexOf(" "));
+    // фильтруем события, заголовки которых содержат ключевые слова:
+    var evTitle = events[i].getTitle().toLowerCase(); // 
+    var firstWordTitle = evTitle.split(" ")[0];
     if ( filterKeywords.indexOf(firstWordTitle) != -1 ) {
       wasFiltered ++;
+      debugArr.push(evTitle);
       if (triggeredKeywords.indexOf(firstWordTitle) == -1) {
         triggeredKeywords.push(filterKeywords[filterKeywords.indexOf(firstWordTitle)]);
       }
@@ -121,9 +151,27 @@ function StatisticsForEachYear(employee, id) {
     }
   }
   TableBuild(sheet,this_YearEvents,thisYear,yearEvents,monthAverage,monthEvents,monthDays,each_MonthEventAver,thisMonth,indent_devideString,indent_emptySells,indent_titlesYearPatients,indent_titlesMonths,indent_titlesData,indent_YearEvents,indent_MonthEventAver,titlesYearPatients,titlesMonths,titlesData);
+  var triggKeys = [];
+  for (var i=0; i<triggeredKeywords.length; i++){
+    triggKeys.push(triggeredKeywords[i]+'\n');
+  }
   
-Logger.log(wasFiltered.toFixed());
-Logger.log(triggeredKeywords);
+Logger.log("Отфильтровано: " + wasFiltered.toFixed() + " событий");
+Logger.log("По ключевым словам: " + triggKeys);
+Logger.log(debugArr);
+  
+  // добавляем в таблицу количество отфильтрованных событий и ключевые слова по которым сработал фильтр:
+  sheet.getRange(indent_MonthEventAver+4,1,1,2).merge();
+  sheet.getRange(indent_MonthEventAver+4,1).setValues([['Отфильтровано событий:']]);
+  sheet.getRange(indent_MonthEventAver+4,1,1,2).setHorizontalAlignments([['right','right']]);
+  sheet.getRange(indent_MonthEventAver+4,3).setValues([[wasFiltered.toFixed()]]);
+  sheet.getRange(indent_MonthEventAver+4,3).setHorizontalAlignments([['center']]);
+  
+  sheet.getRange(indent_MonthEventAver+5,1,1,2).merge();
+  sheet.getRange(indent_MonthEventAver+5,1).setValues([['По ключам:']]);
+  sheet.getRange(indent_MonthEventAver+5,1,1,2).setHorizontalAlignments([['right','right']]);
+  sheet.getRange(indent_MonthEventAver+5,1,1,2).setVerticalAlignments([['top','top']]);
+  sheet.getRange(indent_MonthEventAver+5,3).setValues([[triggKeys.join('')]]);
 }
 
 
@@ -137,28 +185,38 @@ function TableBuild(sheet,this_YearEvents,thisYear,yearEvents,monthAverage,month
   
   // Оформление таблицы:
     // получаем диапазоны:
-  var range_YearBlock = sheet.getRange(indent_devideString,1,6,13);
-  var range_devideString = sheet.getRange(indent_devideString,1,1,13);
-  var range_emptySells = sheet.getRange(indent_emptySells,5,2,9);
-  var range_titlesYearPatients = sheet.getRange(indent_titlesYearPatients,1,2,2);
-  var range_titlesMonths = sheet.getRange(indent_titlesMonths,2,1,12);
-  var range_titlesData = sheet.getRange(indent_titlesData,1,3,1);
-  var range_YearEvents = sheet.getRange(indent_YearEvents,3,2,2);
-  var range_MonthEventAver = sheet.getRange(indent_MonthEventAver,2,2,12);
+  var range_YearBlock = sheet.getRange(indent_devideString,1,6,13); // блок года
+  var range_devideString = sheet.getRange(indent_devideString,1,1,13); // разделительная строка
+  var range_emptySells = sheet.getRange(indent_emptySells,5,2,9); // пустые ячейки
+  var range_titlesYearPatients = sheet.getRange(indent_titlesYearPatients,1,2,2); // заголовок год и событий в этом году
+  var range_titlesMonths = sheet.getRange(indent_titlesMonths,2,1,12); // названия месяцев
+  var range_titlesData = sheet.getRange(indent_titlesData,1,3,1); // Месяц; Всего_в_мес: Сред_в_мес:
+  var range_YearEvents = sheet.getRange(indent_YearEvents,3,2,2); // значение года и кол-во событий в этом году
+  var range_MonthEventAver = sheet.getRange(indent_MonthEventAver,2,2,12); // собсна результаты расчетов
      // задаем им форматирование:
-  range_YearBlock.setBorder(true,true,true,true,true,true); // разлиновываем всю таблицу, затем:
+  range_YearBlock.setBorder(true,true,true,true,true,true); // разлиновываем всю таблицу и танцуем дальше:
   range_devideString.merge();
+  range_devideString.setBackgrounds([['#999999','#999999','#999999','#999999','#999999','#999999','#999999','#999999','#999999','#999999','#999999','#999999','#999999']]);
   range_emptySells.merge();
+  range_emptySells.setBackgrounds([['#efefef','#efefef','#efefef','#efefef','#efefef','#efefef','#efefef','#efefef','#efefef'],['#efefef','#efefef','#efefef','#efefef','#efefef','#efefef','#efefef','#efefef','#efefef']]);
   range_titlesYearPatients.mergeAcross();
+  range_titlesYearPatients.setBackgrounds([['#cccccc','#cccccc'],['#cccccc','#cccccc']]);
+  range_titlesYearPatients.setFontSizes([[11,11],[11,11]]);
   range_titlesYearPatients.setHorizontalAlignments([['right','right'],['right','right']]);
   range_titlesYearPatients.setValues(titlesYearPatients);
   range_titlesMonths.setHorizontalAlignments([['center','center','center','center','center','center','center','center','center','center','center','center']]);
+  range_titlesMonths.setFontSizes([[11,11,11,11,11,11,11,11,11,11,11,11]]);
+  range_titlesMonths.setBackgrounds([['#cccccc','#cccccc','#cccccc','#cccccc','#cccccc','#cccccc','#cccccc','#cccccc','#cccccc','#cccccc','#cccccc','#cccccc']]);
   range_titlesMonths.setValues(titlesMonths);
   range_titlesData.setHorizontalAlignments([['right'],['right'],['right']]);
   range_titlesData.setValues(titlesData);
+  range_titlesData.setBackgrounds([['#cccccc'],['#cccccc'],['#cccccc']]);
+//  range_titlesData.setFontSizes([[11],[11],[11]]);
   range_YearEvents.setHorizontalAlignments([['center','center'],['center','center']]);
   range_YearEvents.mergeAcross();
+  range_YearEvents.setFontWeights([['bold','bold'],['bold','bold']]);
   range_MonthEventAver.setHorizontalAlignments([['center','center','center','center','center','center','center','center','center','center','center','center'],['center','center','center','center','center','center','center','center','center','center','center','center']]);
+  range_MonthEventAver.setFontWeights([['bold','bold','bold','bold','bold','bold','bold','bold','bold','bold','bold','bold'],['bold','bold','bold','bold','bold','bold','bold','bold','bold','bold','bold','bold']]);
     // и вставляем результаты:
   range_YearEvents.setValues(this_YearEvents);
   range_MonthEventAver.setValues(each_MonthEventAver);
